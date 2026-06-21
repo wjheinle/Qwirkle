@@ -1,0 +1,15 @@
+{
+  "name": "qwirkle-scorekeeper",
+  "version": "1.0.0",
+  "description": "Live scorekeeper for Qwirkle, 2-4 players, deployable on Railway",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Qwirkle Scorekeeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div id="app"></div>
+
+<!-- Score entry modal -->
+<div id="entryModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-eyebrow">Score this turn</div>
+      <h2 id="entryPlayerName">—</h2>
+    </div>
+    <input id="entryPoints" type="number" inputmode="numeric" min="0" step="1" placeholder="0" autocomplete="off">
+    <label class="toggle-row">
+      <span>Qwirkle (completed a line of 6)</span>
+      <input type="checkbox" id="entryQwirkle">
+      <span class="toggle-pill" data-for="entryQwirkle"></span>
+    </label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="entryCancel">Cancel</button>
+      <button class="btn primary" id="entrySubmit">Add score</button>
+    </div>
+  </div>
+</div>
+
+<!-- End game modal -->
+<div id="endModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-eyebrow">End game</div>
+      <h2>Who played their last tile?</h2>
+    </div>
+    <div class="modal-sub">That player gets the +6 final-tile bonus. Pick "No one" if the bag ran out and nobody emptied their hand.</div>
+    <div id="endPlayerList" class="end-player-list"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="endCancel">Cancel</button>
+      <button class="btn primary" id="endNoBonus">No one — end without bonus</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
