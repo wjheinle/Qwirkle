@@ -1,3 +1,35 @@
+// ---------- background decoration ----------
+
+const BG_SHAPES = ['shp-circle', 'shp-square', 'shp-diamond', 'shp-clover', 'shp-star', 'shp-x'];
+const BG_COLORS = ['var(--red)', 'var(--orange)', 'var(--yellow)', 'var(--green)', 'var(--blue)', 'var(--purple)'];
+
+function paintBackgroundTiles() {
+  const group = document.getElementById('bgTilesGroup');
+  if (!group || group.childElementCount) return; // only paint once
+  const COUNT = 26;
+  const svgNS = 'http://www.w3.org/2000/svg';
+  for (let i = 0; i < COUNT; i++) {
+    const use = document.createElementNS(svgNS, 'use');
+    const shape = BG_SHAPES[Math.floor(Math.random() * BG_SHAPES.length)];
+    const color = BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)];
+    const x = Math.random() * 100;
+    const y = Math.random() * 200;
+    const size = 6 + Math.random() * 7; // viewBox units
+    const rotation = Math.floor(Math.random() * 360);
+    const opacity = 0.05 + Math.random() * 0.07;
+
+    use.setAttribute('href', `#${shape}`);
+    use.setAttribute('x', x - size / 2);
+    use.setAttribute('y', y - size / 2);
+    use.setAttribute('width', size);
+    use.setAttribute('height', size);
+    use.setAttribute('fill', color);
+    use.setAttribute('opacity', opacity.toFixed(2));
+    use.setAttribute('transform', `rotate(${rotation} ${x} ${y})`);
+    group.appendChild(use);
+  }
+}
+
 // ---------- helpers ----------
 
 const PLAYER_COLORS = ['var(--blue)', 'var(--orange)', 'var(--green)', 'var(--purple)'];
@@ -46,7 +78,10 @@ function stopPolling() {
 // ---------- router ----------
 
 window.addEventListener('hashchange', route);
-window.addEventListener('DOMContentLoaded', route);
+window.addEventListener('DOMContentLoaded', () => {
+  paintBackgroundTiles();
+  route();
+});
 
 function route() {
   stopPolling();
@@ -73,9 +108,13 @@ async function renderHome() {
     </div>
     <div class="panel" id="setupPanel">
       <h3>New Game</h3>
+      <div class="order-hint">First in the list goes first. Use the arrows or shuffle to set the order.</div>
       <div id="playerInputs"></div>
       <div class="setup-actions">
         <button class="btn ghost small" id="addPlayerBtn">+ Add player</button>
+        <button class="btn ghost small" id="shuffleBtn">🎲 Shuffle order</button>
+      </div>
+      <div class="setup-actions" style="margin-top:10px">
         <button class="btn primary block" id="startGameBtn">Start game</button>
       </div>
     </div>
@@ -94,6 +133,14 @@ async function renderHome() {
     if (setupPlayers.length >= 4) return;
     setupPlayers.push('');
     renderPlayerInputs();
+  });
+  document.getElementById('shuffleBtn').addEventListener('click', () => {
+    for (let i = setupPlayers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [setupPlayers[i], setupPlayers[j]] = [setupPlayers[j], setupPlayers[i]];
+    }
+    renderPlayerInputs();
+    showToast('Order shuffled');
   });
   document.getElementById('startGameBtn').addEventListener('click', startGame);
 
@@ -124,13 +171,30 @@ function renderPlayerInputs() {
   setupPlayers.forEach((val, i) => {
     const row = el(`
       <div class="player-input-row">
+        <span class="order-badge">${i + 1}</span>
         <span class="player-swatch" style="background:${PLAYER_COLORS[i]}"></span>
         <input type="text" placeholder="Player ${i + 1} name" value="${val.replace(/"/g, '&quot;')}" maxlength="20">
+        <div class="order-arrows">
+          <button type="button" class="order-up" ${i === 0 ? 'disabled' : ''} aria-label="Move up">&#9650;</button>
+          <button type="button" class="order-down" ${i === setupPlayers.length - 1 ? 'disabled' : ''} aria-label="Move down">&#9660;</button>
+        </div>
         ${setupPlayers.length > 2 ? '<button class="remove-btn" type="button">&times;</button>' : ''}
       </div>
     `);
     const input = row.querySelector('input');
     input.addEventListener('input', (e) => (setupPlayers[i] = e.target.value));
+
+    row.querySelector('.order-up').addEventListener('click', () => {
+      if (i === 0) return;
+      [setupPlayers[i - 1], setupPlayers[i]] = [setupPlayers[i], setupPlayers[i - 1]];
+      renderPlayerInputs();
+    });
+    row.querySelector('.order-down').addEventListener('click', () => {
+      if (i === setupPlayers.length - 1) return;
+      [setupPlayers[i + 1], setupPlayers[i]] = [setupPlayers[i], setupPlayers[i + 1]];
+      renderPlayerInputs();
+    });
+
     const removeBtn = row.querySelector('.remove-btn');
     if (removeBtn) {
       removeBtn.addEventListener('click', () => {
