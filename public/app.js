@@ -229,14 +229,20 @@ async function renderGame(id) {
   drawGame();
   pollTimer = setInterval(async () => {
     if (uiPhase === 'reveal') return; // don't disrupt the reveal countdown
+    const entryCard = document.querySelector('.entry-card');
+    const userIsTyping = entryCard && entryCard.contains(document.activeElement) && document.activeElement !== document.body;
+    if (userIsTyping) return; // don't wipe out a score someone is mid-typing
     try {
       const fresh = await api('GET', `/api/games/${id}`);
-      currentGame = fresh;
-      drawGame();
+      const stillNotTyping = !entryCard || !entryCard.contains(document.activeElement) || document.activeElement === document.body;
+      if (uiPhase !== 'reveal' && stillNotTyping) {
+        currentGame = fresh;
+        drawGame();
+      }
     } catch (e) {
       /* silent — keep last known state */
     }
-  }, 4000);
+  }, 7000);
 }
 
 function drawGame() {

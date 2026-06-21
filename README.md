@@ -28,6 +28,28 @@ the table.
   turn score and just flag it as a Qwirkle so it's highlighted
 - +6 bonus for the player who plays their last tile when the bag runs dry
 
+## Keeping it cheap — sleep when idle
+
+This app has no database connections, telemetry, or background jobs, which
+makes it a good fit for Railway's **Serverless** mode (formerly called
+"App-Sleeping"). It puts the service to sleep after about 10 minutes with no
+traffic, and automatically wakes it back up the moment someone opens the
+link — you only pay for compute while it's actually running.
+
+To turn it on:
+
+1. In Railway, open your project → the service → **Settings → Deploy**.
+2. Scroll to **Serverless** and toggle **Enable Serverless** on.
+3. Redeploy if prompted.
+
+A couple of things to expect:
+
+- The *first* request after it's been asleep takes a few extra seconds to
+  "wake up," and very occasionally that first load shows an error — just
+  reload once and it'll be fine.
+- If you know game night is starting, opening the link a minute early gets
+  it warmed up before anyone's first turn.
+
 ## Running locally
 
 ```bash
