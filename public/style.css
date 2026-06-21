@@ -112,14 +112,28 @@ input { font-family: inherit; }
 }
 
 /* ---------- background decoration ---------- */
+/* To swap the background photo, change the url() below.
+   Option A (default) — Fandom/Wikia CDN, generally hotlink-friendly:
+     https://static.wikia.nocookie.net/board-games-galore/images/1/1f/Qwirkle.png/revision/latest/scale-to-width-down/684?cb=20230919061936
+   Option B — alternate photo of tiles in play:
+     https://cnygifted.com/wp-content/uploads/IMG-2875.jpg
+   If a photo doesn't load (some hosts block hotlinking), download it and
+   reference a local file in /public/ instead, e.g. url('/tiles-bg.jpg'). */
 
-.bg-tiles {
+.bg-photo {
   position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
+  background-image: url('https://static.wikia.nocookie.net/board-games-galore/images/1/1f/Qwirkle.png/revision/latest/scale-to-width-down/684?cb=20230919061936');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.bg-scrim {
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(21,23,28,0.90) 0%, rgba(21,23,28,0.95) 45%, rgba(21,23,28,0.98) 100%);
 }
 
 #app, .modal, .toast { position: relative; z-index: 1; }
@@ -254,25 +268,97 @@ input { font-family: inherit; }
   font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px;
 }
 
-.turn-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--panel);
+.entry-card {
+  background: linear-gradient(160deg, var(--panel), var(--panel-raised));
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 18px;
+  padding: 20px 18px;
   margin-bottom: 18px;
+  text-align: center;
 }
 
-.turn-banner .label {
+.entry-eyebrow {
   font-size: 11px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entry-name {
+  font-size: 26px;
+  margin: 4px 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.entry-name .swatch { width: 11px; height: 11px; border-radius: 3px; }
+
+.entry-card #liveEntryPoints {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 40px;
+  color: var(--ink);
+  text-align: center;
+  margin-bottom: 14px;
+}
+.entry-card #liveEntryPoints:focus { outline: none; border-color: var(--blue); }
+
+.entry-card .toggle-row { text-align: left; padding-bottom: 16px; }
+
+.reveal-banner {
+  background: linear-gradient(135deg, rgba(58,143,214,0.12), rgba(140,95,196,0.12));
+  border: 1px solid rgba(58,143,214,0.3);
+  border-radius: 18px;
+  padding: 22px 18px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+.reveal-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--dim);
   font-weight: 700;
 }
-.turn-banner .who { font-size: 18px; font-weight: 800; margin-top: 2px; }
+.reveal-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 4px 0 14px;
+}
+.reveal-name .swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+.reveal-progress {
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.reveal-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--purple));
+  border-radius: 999px;
+  transition: width 5s linear;
+}
+
+.reveal-hint {
+  font-size: 12px;
+  color: var(--dim);
+}
 
 .pulse-dot {
   display: inline-block;
@@ -307,6 +393,13 @@ input { font-family: inherit; }
   box-shadow: 0 0 0 1px rgba(244,208,63,0.25), 0 8px 24px -8px rgba(244,208,63,0.35);
 }
 .card.active-turn { border-color: var(--blue); }
+.card.just-scored {
+  animation: justScored 1s ease-out;
+}
+@keyframes justScored {
+  0% { transform: scale(1.08); box-shadow: 0 0 0 2px rgba(244,208,63,0.5); }
+  100% { transform: scale(1); box-shadow: none; }
+}
 
 .card .rank {
   font-size: 10px;
@@ -489,20 +582,6 @@ tfoot td:first-child {
 .modal-head h2 { font-size: 26px; margin-top: 2px; }
 
 .modal-sub { font-size: 13px; color: var(--dim); text-align: center; margin-bottom: 14px; }
-
-#entryPoints {
-  width: 100%;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 36px;
-  color: var(--ink);
-  text-align: center;
-  margin-bottom: 14px;
-}
-#entryPoints:focus { outline: none; border-color: var(--blue); }
 
 .toggle-row {
   display: flex;

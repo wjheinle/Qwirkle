@@ -1,35 +1,3 @@
-// ---------- background decoration ----------
-
-const BG_SHAPES = ['shp-circle', 'shp-square', 'shp-diamond', 'shp-clover', 'shp-star', 'shp-x'];
-const BG_COLORS = ['var(--red)', 'var(--orange)', 'var(--yellow)', 'var(--green)', 'var(--blue)', 'var(--purple)'];
-
-function paintBackgroundTiles() {
-  const group = document.getElementById('bgTilesGroup');
-  if (!group || group.childElementCount) return; // only paint once
-  const COUNT = 26;
-  const svgNS = 'http://www.w3.org/2000/svg';
-  for (let i = 0; i < COUNT; i++) {
-    const use = document.createElementNS(svgNS, 'use');
-    const shape = BG_SHAPES[Math.floor(Math.random() * BG_SHAPES.length)];
-    const color = BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)];
-    const x = Math.random() * 100;
-    const y = Math.random() * 200;
-    const size = 6 + Math.random() * 7; // viewBox units
-    const rotation = Math.floor(Math.random() * 360);
-    const opacity = 0.05 + Math.random() * 0.07;
-
-    use.setAttribute('href', `#${shape}`);
-    use.setAttribute('x', x - size / 2);
-    use.setAttribute('y', y - size / 2);
-    use.setAttribute('width', size);
-    use.setAttribute('height', size);
-    use.setAttribute('fill', color);
-    use.setAttribute('opacity', opacity.toFixed(2));
-    use.setAttribute('transform', `rotate(${rotation} ${x} ${y})`);
-    group.appendChild(use);
-  }
-}
-
 // ---------- helpers ----------
 
 const PLAYER_COLORS = ['var(--blue)', 'var(--orange)', 'var(--green)', 'var(--purple)'];
@@ -69,6 +37,14 @@ function fmtDate(iso) {
 const app = document.getElementById('app');
 let pollTimer = null;
 let currentGame = null;
+let uiPhase = 'entry'; // 'entry' | 'reveal' — drives the live scoring flow
+let revealTimer = null;
+const REVEAL_MS = 5000;
+
+function clearRevealTimer() {
+  if (revealTimer) clearTimeout(revealTimer);
+  revealTimer = null;
+}
 
 function stopPolling() {
   if (pollTimer) clearInterval(pollTimer);
@@ -78,17 +54,16 @@ function stopPolling() {
 // ---------- router ----------
 
 window.addEventListener('hashchange', route);
-window.addEventListener('DOMContentLoaded', () => {
-  paintBackgroundTiles();
-  route();
-});
+window.addEventListener('DOMContentLoaded', route);
 
 function route() {
   stopPolling();
+  clearRevealTimer();
   closeModals();
   const hash = location.hash || '#/';
   const gameMatch = hash.match(/^#\/game\/(\d+)/);
   if (gameMatch) {
+    uiPhase = 'entry';
     renderGame(Number(gameMatch[1]));
   } else {
     renderHome();
@@ -253,6 +228,7 @@ async function renderGame(id) {
   }
   drawGame();
   pollTimer = setInterval(async () => {
+    if (uiPhase === 'reveal') return; // don't disrupt the reveal countdown
     try {
       const fresh = await api('GET', `/api/games/${id}`);
       currentGame = fresh;
@@ -269,6 +245,8 @@ function drawGame() {
   const ranked = g.players.slice().sort((a, b) => (g.totals[b] || 0) - (g.totals[a] || 0));
   const topScore = g.totals[ranked[0]] || 0;
   const isTie = g.players.filter((p) => (g.totals[p] || 0) === topScore).length > 1;
+  const lastTurn = g.turns[g.turns.length - 1];
+  const justScoredIndex = isActive && uiPhase === 'reveal' && lastTurn ? lastTurn.player_index : -1;
 
   app.innerHTML = `
     <div class="game-header">
@@ -287,12 +265,27 @@ function drawGame() {
             <h2>${isTie ? ranked.filter((p) => g.totals[p] === topScore).join(' & ') : g.winner || ranked[0]}</h2>
             <div class="score">${ranked.map((p) => `${p} ${g.totals[p] || 0}`).join(' &middot; ')}</div>
           </div>`
-        : `<div class="turn-banner">
-            <div>
-              <div class="label"><span class="pulse-dot"></span>Up next</div>
-              <div class="who">${g.players[g.current_player]}</div>
+        : uiPhase === 'reveal'
+        ? `<div class="reveal-banner" id="revealBanner">
+            <div class="reveal-eyebrow">Up next</div>
+            <div class="reveal-name">
+              <span class="swatch" style="background:${PLAYER_COLORS[g.current_player]}"></span>${g.players[g.current_player]}
             </div>
-            <button class="btn primary" id="scoreBtn">Add score</button>
+            <div class="reveal-progress"><div class="reveal-progress-bar" id="revealBar"></div></div>
+            <div class="reveal-hint">Tap to continue now</div>
+          </div>`
+        : `<div class="entry-card">
+            <div class="entry-eyebrow"><span class="pulse-dot"></span>Enter score for</div>
+            <h2 class="entry-name">
+              <span class="swatch" style="background:${PLAYER_COLORS[g.current_player]}"></span>${g.players[g.current_player]}
+            </h2>
+            <input id="liveEntryPoints" type="number" inputmode="numeric" min="0" step="1" placeholder="0" autocomplete="off">
+            <label class="toggle-row">
+              <span>Qwirkle (completed a line of 6)</span>
+              <input type="checkbox" id="liveEntryQwirkle">
+              <span class="toggle-pill"></span>
+            </label>
+            <button class="btn primary block" id="liveEntrySubmit">Submit score</button>
           </div>`
     }
 
@@ -325,12 +318,13 @@ function drawGame() {
   g.players.forEach((name, i) => {
     const total = g.totals[name] || 0;
     const isLead = ranked[0] === name && !isTie;
-    const isTurn = isActive && g.current_player === i;
+    const isTurn = isActive && uiPhase === 'entry' && g.current_player === i;
+    const justScored = i === justScoredIndex;
     const place = ranked.indexOf(name) + 1;
     const ord = place === 1 ? '1st' : place === 2 ? '2nd' : place === 3 ? '3rd' : '4th';
     board.appendChild(
       el(`
-      <div class="card ${isLead ? 'lead' : ''} ${isTurn ? 'active-turn' : ''}">
+      <div class="card ${isLead ? 'lead' : ''} ${isTurn ? 'active-turn' : ''} ${justScored ? 'just-scored' : ''}">
         <div class="rank">${ord}</div>
         <div class="name"><span class="swatch" style="background:${PLAYER_COLORS[i]}"></span>${name}</div>
         <div class="total">${total}</div>
@@ -378,8 +372,24 @@ function drawGame() {
   // wire up controls
   document.getElementById('backBtn').addEventListener('click', () => (location.hash = '#/'));
 
-  const scoreBtn = document.getElementById('scoreBtn');
-  if (scoreBtn) scoreBtn.addEventListener('click', openEntryModal);
+  const liveSubmit = document.getElementById('liveEntrySubmit');
+  if (liveSubmit) {
+    liveSubmit.addEventListener('click', submitLiveScore);
+    const liveInput = document.getElementById('liveEntryPoints');
+    liveInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitLiveScore();
+    });
+    setTimeout(() => liveInput.focus(), 50);
+  }
+
+  const revealBanner = document.getElementById('revealBanner');
+  if (revealBanner) {
+    revealBanner.addEventListener('click', skipReveal);
+    requestAnimationFrame(() => {
+      const bar = document.getElementById('revealBar');
+      if (bar) bar.style.width = '0%';
+    });
+  }
 
   const undoBtn = document.getElementById('undoBtn');
   if (undoBtn) undoBtn.addEventListener('click', undoTurn);
@@ -394,48 +404,41 @@ function drawGame() {
   if (newGameBtn) newGameBtn.addEventListener('click', () => (location.hash = '#/'));
 }
 
-// ---------- score entry modal ----------
+// ---------- live entry / reveal flow ----------
 
-function openEntryModal() {
-  const modal = document.getElementById('entryModal');
-  document.getElementById('entryPlayerName').textContent = currentGame.players[currentGame.current_player];
-  const pointsInput = document.getElementById('entryPoints');
-  pointsInput.value = '';
-  document.getElementById('entryQwirkle').checked = false;
-  modal.classList.remove('hidden');
-  setTimeout(() => pointsInput.focus(), 50);
-}
-
-function closeModals() {
-  document.getElementById('entryModal')?.classList.add('hidden');
-  document.getElementById('endModal')?.classList.add('hidden');
-}
-
-document.getElementById('entryCancel').addEventListener('click', closeModals);
-document.getElementById('entryModal').addEventListener('click', (e) => {
-  if (e.target.id === 'entryModal') closeModals();
-});
-document.getElementById('entrySubmit').addEventListener('click', async () => {
-  const points = Number(document.getElementById('entryPoints').value);
+async function submitLiveScore() {
+  const pointsInput = document.getElementById('liveEntryPoints');
+  const points = Number(pointsInput.value);
   if (!Number.isFinite(points) || points < 0 || !Number.isInteger(points)) {
     return showToast('Enter a whole number, 0 or more');
   }
-  const qwirkle = document.getElementById('entryQwirkle').checked;
+  const qwirkle = document.getElementById('liveEntryQwirkle').checked;
   try {
     currentGame = await api('POST', `/api/games/${currentGame.id}/turns`, { points, qwirkle });
-    closeModals();
+    uiPhase = 'reveal';
     drawGame();
+    clearRevealTimer();
+    revealTimer = setTimeout(() => {
+      uiPhase = 'entry';
+      revealTimer = null;
+      drawGame();
+    }, REVEAL_MS);
   } catch (e) {
     showToast(e.message);
   }
-});
-document.getElementById('entryPoints').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('entrySubmit').click();
-});
+}
+
+function skipReveal() {
+  clearRevealTimer();
+  uiPhase = 'entry';
+  drawGame();
+}
 
 async function undoTurn() {
+  clearRevealTimer();
   try {
     currentGame = await api('POST', `/api/games/${currentGame.id}/undo`);
+    uiPhase = 'entry';
     drawGame();
   } catch (e) {
     showToast(e.message);
@@ -444,7 +447,12 @@ async function undoTurn() {
 
 // ---------- end game modal ----------
 
+function closeModals() {
+  document.getElementById('endModal')?.classList.add('hidden');
+}
+
 function openEndModal() {
+  clearRevealTimer();
   const list = document.getElementById('endPlayerList');
   list.innerHTML = '';
   currentGame.players.forEach((name, i) => {
@@ -480,6 +488,7 @@ async function endGame(finalPlayer) {
 async function reopenGame() {
   try {
     currentGame = await api('POST', `/api/games/${currentGame.id}/reopen`);
+    uiPhase = 'entry';
     drawGame();
   } catch (e) {
     showToast(e.message);
