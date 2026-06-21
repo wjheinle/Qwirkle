@@ -99,6 +99,7 @@ qwirkle-app/
 ├── public/
 │   ├── index.html      App shell + modals
 │   ├── style.css        Visual design (dark, Qwirkle-colored)
-│   └── app.js            All frontend logic (no build step, no framework)
+│   ├── app.js            All frontend logic (no build step, no framework)
+│   └── tiles-bg.jpg       Background photo of physical Qwirkle tiles
 └── data/                Created automatically — game data lives here
 ```

@@ -112,18 +112,12 @@ input { font-family: inherit; }
 }
 
 /* ---------- background decoration ---------- */
-/* To swap the background photo, change the url() below.
-   Option A (default) — Fandom/Wikia CDN, generally hotlink-friendly:
-     https://static.wikia.nocookie.net/board-games-galore/images/1/1f/Qwirkle.png/revision/latest/scale-to-width-down/684?cb=20230919061936
-   Option B — alternate photo of tiles in play:
-     https://cnygifted.com/wp-content/uploads/IMG-2875.jpg
-   If a photo doesn't load (some hosts block hotlinking), download it and
-   reference a local file in /public/ instead, e.g. url('/tiles-bg.jpg'). */
+/* tiles-bg.jpg is the actual photo of physical Qwirkle tiles, bundled in /public */
 
 .bg-photo {
   position: fixed;
   inset: 0;
-  background-image: url('https://static.wikia.nocookie.net/board-games-galore/images/1/1f/Qwirkle.png/revision/latest/scale-to-width-down/684?cb=20230919061936');
+  background-image: url('/tiles-bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -133,7 +127,7 @@ input { font-family: inherit; }
   position: fixed;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(21,23,28,0.90) 0%, rgba(21,23,28,0.95) 45%, rgba(21,23,28,0.98) 100%);
+    linear-gradient(180deg, rgba(21,23,28,0.72) 0%, rgba(21,23,28,0.82) 45%, rgba(21,23,28,0.92) 100%);
 }
 
 #app, .modal, .toast { position: relative; z-index: 1; }
