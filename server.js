@@ -192,3 +192,26 @@ app.listen(PORT, () => {
   console.log(`Qwirkle scorekeeper running on port ${PORT}`);
   console.log(`Data file: ${DB_FILE}`);
 });
+
+// ---------- inactivity sleep ----------
+// Exit after 15 minutes of no requests so Railway's Serverless
+// keeps the container truly idle (and not billing). Railway wakes
+// it automatically on the next incoming request.
+const SLEEP_AFTER_MS = 15 * 60 * 1000;
+let sleepTimer = null;
+
+function resetSleepTimer() {
+  if (sleepTimer) clearTimeout(sleepTimer);
+  sleepTimer = setTimeout(() => {
+    console.log('No activity for 15 minutes — shutting down for sleep.');
+    process.exit(0);
+  }, SLEEP_AFTER_MS);
+}
+
+// Reset the timer on every incoming request
+app.use((req, res, next) => {
+  resetSleepTimer();
+  next();
+});
+
+resetSleepTimer(); // start the clock on boot
