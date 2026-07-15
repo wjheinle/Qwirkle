@@ -53,30 +53,8 @@ function pickWinner(game, totals) {
 }
 
 const app = express();
-// ---------- inactivity sleep ----------
-// Exit after 15 minutes of no requests so Railway keeps the container
-// truly idle. Railway wakes it automatically on the next request.
-const SLEEP_AFTER_MS = 15 * 60 * 1000;
-let sleepTimer = null;
-
-function resetSleepTimer() {
-  if (sleepTimer) clearTimeout(sleepTimer);
-  sleepTimer = setTimeout(() => {
-    console.log('No activity for 15 minutes — shutting down for sleep.');
-    process.exit(0);
-  }, SLEEP_AFTER_MS);
-}
-
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Reset the inactivity timer on every incoming request
-app.use((req, res, next) => {
-  resetSleepTimer();
-  next();
-});
-
-resetSleepTimer(); // start the clock on boot
 
 // Health check — Railway pings this to confirm the app is up
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
