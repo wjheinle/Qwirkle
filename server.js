@@ -78,6 +78,9 @@ app.use((req, res, next) => {
 
 resetSleepTimer(); // start the clock on boot
 
+// Health check — Railway pings this to confirm the app is up
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 // List all games (most recent first)
 app.get('/api/games', (req, res) => {
   const sorted = [...db.games].sort((a, b) => b.id - a.id);
